@@ -187,6 +187,7 @@ La sesión queda en `sessions/` y se reutiliza en los siguientes arranques. Si l
 | `npm run setup` | Comprueba Node, crea `.env`, carpetas y base de datos, detecta FFmpeg/yt-dlp y resume la configuración |
 | `npm run reset-session` | Borra **solo** la carpeta de sesión. Pide confirmación; para saltarla usa `npm run reset-session -- --yes` (los dos guiones son obligatorios: npm se queda con los flags que van antes) |
 | `npm run check` | Diagnóstico offline: config, owner, DB, comandos, binarios, proveedores y banner |
+| `npm run doctor` | **Diagnóstico en vivo**: se conecta y muestra, mensaje a mensaje, por qué se ejecuta o no un comando (tipo de evento, prefijo detectado, comando, permisos). No ejecuta los comandos |
 | `npm test` | Suite de pruebas automáticas (37 tests, sin conexión a WhatsApp) |
 
 ---
@@ -437,7 +438,15 @@ MAIN, INFO, FUN, PANEL, OWNER, GROUP, GAME, RPG, XP, STORE, QUOTES, RANDOM (incl
 
 ### El bot no responde a nada
 
-Ejecútalo con el diagnóstico activado y observa la consola mientras escribes `.ping`:
+Ejecuta el diagnóstico en vivo y escribe `.ping` mientras está abierto:
+
+```bash
+npm run doctor
+```
+
+Por cada mensaje imprime una traza: tipo de evento (`notify`/`append`), si es tuyo, el prefijo detectado (con los códigos de carácter, para cazar prefijos raros o espacios invisibles), el comando resuelto y el estado de los permisos. Si al escribir **no aparece ninguna traza**, el dispositivo vinculado no está recibiendo tus mensajes.
+
+También puedes arrancar el bot normal con el registro detallado:
 
 ```bash
 DEBUG_MESSAGES=true LOG_LEVEL=debug npm start

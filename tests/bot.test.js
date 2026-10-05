@@ -498,6 +498,11 @@ test('se procesan los mensajes propios (append) y se descartan los antiguos', as
   assert.equal(shouldProcessUpsert('append', fresh(false), now), false);
   assert.equal(shouldProcessUpsert('notify', { key: {} }, now), false, 'sin contenido no se procesa');
   assert.equal(shouldProcessUpsert('prepend', fresh(false), now), false);
+  assert.equal(
+    shouldProcessUpsert('prepend', fresh(true), now),
+    true,
+    'cualquier tipo con un mensaje propio y reciente debe procesarse',
+  );
 
   const old = { ...fresh(false), messageTimestamp: Math.floor(now / 1000) - 3600 };
   assert.equal(shouldProcessUpsert('notify', old, now), false, 'no debe reejecutar mensajes antiguos');

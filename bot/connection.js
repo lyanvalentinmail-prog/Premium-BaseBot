@@ -87,12 +87,16 @@ export const MAX_MESSAGE_AGE_SECONDS = 300;
  * @param {number} [now] marca de tiempo en milisegundos
  */
 export const shouldProcessUpsert = (type, message, now = Date.now()) => {
-  if (type !== 'notify' && type !== 'append') return false;
   if (!message?.message) return false;
-  if (type === 'append' && !message.key?.fromMe) return false;
+
+  // Al reconectar, WhatsApp reenvía historial: nunca se reejecutan comandos viejos.
   const timestamp = Number(message.messageTimestamp || 0);
   if (timestamp > 0 && now / 1000 - timestamp > MAX_MESSAGE_AGE_SECONDS) return false;
-  return true;
+
+  if (type === 'notify') return true;
+  // 'append' (y cualquier otro tipo que use la versión de WhatsApp en uso):
+  // solo se aceptan los mensajes propios y recientes.
+  return Boolean(message.key?.fromMe);
 };
 
 /**
@@ -162,6 +166,8 @@ export const startConnection = async (options = {}) => {
 │ 🤖 Estado ☇ Conectado
 │ 🎋 Prefijo ☇ ${config.prefix}
 │ 👑 Owner  ☇ ${config.owner.name}
+│
+│ ¿No responde? ☇ npm run doctor
 │
 ╰────────────────────⬣
 `);

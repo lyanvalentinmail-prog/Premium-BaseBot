@@ -3,6 +3,17 @@
 Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [SemVer](https://semver.org/lang/es/).
 
+## [1.0.4] - 2026-10-05
+
+### Añadido
+
+- `npm run doctor`: diagnóstico en vivo que traza cada mensaje recibido (tipo de evento, remitente, prefijo con códigos de carácter, comando resuelto, permisos y modo) sin ejecutar los comandos.
+- Aviso «¿No responde? ☇ npm run doctor» en el banner de conexión.
+
+### Cambiado
+
+- `messages.upsert` acepta ahora **cualquier** tipo de evento cuando el mensaje es propio y reciente (no solo `append`), para cubrir las variaciones entre versiones de WhatsApp. El historial antiguo se sigue descartando.
+
 ## [1.0.3] - 2026-10-05
 
 ### Corregido
