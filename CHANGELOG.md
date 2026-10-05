@@ -3,6 +3,20 @@
 Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [SemVer](https://semver.org/lang/es/).
 
+## [1.0.3] - 2026-10-05
+
+### Corregido
+
+- **Los comandos escritos desde el propio número del bot no se ejecutaban**: WhatsApp entrega esos mensajes en `messages.upsert` con `type: 'append'` y el bot solo procesaba `'notify'`. Es el caso más habitual al probar el bot recién vinculado, y hacía que *ningún* comando respondiera.
+- **Identidades LID (`@lid`)**: WhatsApp puede identificar al remitente con un LID en lugar de su número. Ahora se resuelve el JID real desde `senderPn`/`participantPn`, de modo que owner, administradores, baneos y modo privado vuelven a funcionar. Se guarda la identidad alternativa en `m.senderAlt` y se comprueban ambas.
+- El bot ya no reejecuta comandos antiguos reenviados por WhatsApp al reconectar (límite de 5 minutos de antigüedad).
+
+### Añadido
+
+- `DEBUG_MESSAGES=true`: registra metadatos (nunca el contenido) de cada mensaje recibido, el comando detectado y el motivo por el que se ignora (sin prefijo, no encontrado, modo privado, cooldown).
+- Sección «El bot no responde a nada» en el README con un diagnóstico paso a paso.
+- Pruebas del filtro de `messages.upsert`, de los comandos propios (`fromMe`) y de la resolución de LID (45 en total).
+
 ## [1.0.2] - 2026-10-05
 
 ### Corregido

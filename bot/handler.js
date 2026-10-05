@@ -69,8 +69,12 @@ export const handleMessage = async (sock, raw) => {
   if (!m.sender) return;
 
   const botNumber = jidToNumber(sock.user?.id || '');
-  const isSelf = jidToNumber(m.sender) === botNumber;
-  const isOwner = isOwnerJid(m.sender) || isSelf;
+  const botLid = jidToNumber(sock.user?.lid || '');
+  const senderNumber = jidToNumber(m.sender);
+  const isSelf =
+    Boolean(senderNumber) && (senderNumber === botNumber || (Boolean(botLid) && senderNumber === botLid));
+  // El owner se valida contra las dos identidades posibles (número y LID).
+  const isOwner = isOwnerJid(m.sender) || (m.senderAlt ? isOwnerJid(m.senderAlt) : false) || isSelf;
 
   // Mensajes propios: solo se procesan si son comandos (evita bucles de respuesta).
   const rawText = (m.text || '').trim();
@@ -106,13 +110,22 @@ export const handleMessage = async (sock, raw) => {
     }
   }
 
-  if (!prefix) return;
+  if (!prefix) {
+    if (config.debugMessages && rawText) {
+      log.info({ prefijosActivos: activePrefixes }, 'Mensaje sin prefijo: no se ejecuta ningún comando');
+    }
+    return;
+  }
 
   const withoutPrefix = rawText.slice(prefix.length).trim();
   if (!withoutPrefix) return;
   const [commandName, ...args] = withoutPrefix.split(/\s+/);
   const command = resolveCommand(commandName);
-  if (!command) return;
+  if (!command) {
+    if (config.debugMessages) log.info({ commandName }, 'Comando no encontrado');
+    return;
+  }
+  if (config.debugMessages) log.info({ command: command.name, isOwner, grupo: m.isGroup }, 'Comando detectado');
 
   // Usuarios baneados: sin excepciones salvo el owner.
   if (!isOwner && (user.banned || isBanned(m.sender))) {
@@ -121,7 +134,12 @@ export const handleMessage = async (sock, raw) => {
   }
 
   // Modo privado
-  if (!canUseInPrivateMode(m.sender) && !isOwner) return;
+  if (!canUseInPrivateMode(m.sender) && !isOwner) {
+    if (config.debugMessages) {
+      log.info({ command: command.name }, 'Ignorado: el bot está en modo privado y el usuario no está autorizado');
+    }
+    return;
+  }
 
   // Comandos desactivados por el owner
   if (isCommandBlocked(command.name) && !isOwner) {
@@ -136,8 +154,11 @@ export const handleMessage = async (sock, raw) => {
   if (m.isGroup) {
     groupMetadata = await getGroupMetadata(sock, m.chat, { force: command.admin || command.botAdmin });
     if (groupMetadata) {
-      isAdmin = isGroupAdmin(groupMetadata, m.sender);
-      isBotAdmin = getAdmins(groupMetadata).some((jid) => jidToNumber(jid) === botNumber);
+      isAdmin = isGroupAdmin(groupMetadata, m.sender) || (m.senderAlt ? isGroupAdmin(groupMetadata, m.senderAlt) : false);
+      isBotAdmin = getAdmins(groupMetadata).some((jid) => {
+        const number = jidToNumber(jid);
+        return number === botNumber || (Boolean(botLid) && number === botLid);
+      });
     }
   }
 
@@ -164,6 +185,7 @@ export const handleMessage = async (sock, raw) => {
   if (!isOwner && cooldownMs > 0) {
     const remaining = checkCooldown(`${m.sender}:${command.name}`, cooldownMs);
     if (remaining > 0) {
+      if (config.debugMessages) log.info({ command: command.name, remaining }, 'Ignorado por cooldown');
       if (remaining > 1500) {
         await ctx.react('🕒');
       }

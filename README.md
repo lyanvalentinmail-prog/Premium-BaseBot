@@ -134,6 +134,7 @@ Lo mínimo imprescindible es `OWNER_NUMBER`.
 | `ANTISPAM_SECONDS` | `3` | Cooldown global por usuario y comando |
 | `INTERACTIVE_MENU` | `false` | `true` intenta el menú con botón/lista nativa; muchas versiones de WhatsApp lo descartan sin avisar, por eso por defecto se envía el menú clásico (imagen + texto) |
 | `LOG_LEVEL` | `info` | `trace`…`silent` |
+| `DEBUG_MESSAGES` | `false` | `true` registra metadatos de cada mensaje recibido y del comando detectado (sin contenido privado). Úsalo para diagnosticar «el bot no responde» |
 | `NODE_ENV` | `production` | Entorno |
 
 Otras variables de comportamiento (`AUTO_READ`, `AUTO_TYPING`, `SELF_REPLY`, `REACT_ON_COMMAND`, `MAX_MEDIA_MB`, `MAX_AUDIO_SECONDS`, `TEMP_TTL_MINUTES`, `HTTP_TIMEOUT_MS`, `MAX_RECONNECT_ATTEMPTS`, `BROWSER_NAME`, `STICKER_PACK`, `STICKER_AUTHOR`, `XP_*`, `CURRENCY_*`, `DAILY_REWARD`, `START_BALANCE`) están documentadas en `.env.example`.
@@ -425,11 +426,30 @@ MAIN, INFO, FUN, PANEL, OWNER, GROUP, GAME, RPG, XP, STORE, QUOTES, RANDOM (incl
 | La base de datos no guarda | Comprueba permisos de escritura en `data/`; `npm run check` lo verifica |
 | `npm run reset-session` dice «No hay ninguna sesión guardada» | Desde la v1.0.2 detecta la carpeta aunque el `.env` esté en formato Windows (CRLF), con comillas o con comentarios, y busca también `session/`, `auth_info_baileys/` y `auth_info/`. Si usas otra ruta: `SESSION_DIR=mi_carpeta npm run reset-session -- --yes` |
 | `npm run reset-session` no borra nada o se queda esperando | Sin terminal interactiva no puede preguntar: usa `npm run reset-session -- --yes`. Detén el bot antes, o volverá a escribir la sesión al instante |
+| **Ningún comando responde** | Sigue el diagnóstico de abajo (⤵︎ *El bot no responde a nada*) |
+| El bot no responde a los comandos que escribes **desde su propio número** | Corregido en la v1.0.3: esos mensajes llegan como `append` y antes se descartaban. Actualiza con `git pull` |
+| El bot responde a otros pero no te reconoce como owner | Desde la v1.0.3 se resuelve el LID (`@lid`) al número real. Comprueba también `OWNER_NUMBER` (sin `+`, con código de país) |
 | `.menu` no responde (el resto de comandos sí) | Estás usando el menú interactivo: pon `INTERACTIVE_MENU=false` en `.env` (valor por defecto desde la v1.0.1). WhatsApp descarta en silencio los mensajes de botón/lista en muchas versiones |
 | `.menu` llega sin imagen | Falta o está vacío `assets/banner.jpg` (o `BANNER_PATH` apunta mal): el bot envía el menú en texto y lo avisa en el log |
 | El bot no responde en un grupo | Modo privado activo (`.public`), comando bloqueado (`.blockedcmds`) o usuario baneado (`.banlist`) |
 | Termux mata el proceso | `termux-wake-lock` y desactiva la optimización de batería; para 24/7 real usa un VPS |
 | Errores TLS al instalar | Problema de red/proxy local, no del proyecto; prueba otra red o `npm config set registry https://registry.npmjs.org/` |
+
+### El bot no responde a nada
+
+Ejecútalo con el diagnóstico activado y observa la consola mientras escribes `.ping`:
+
+```bash
+DEBUG_MESSAGES=true LOG_LEVEL=debug npm start
+```
+
+1. **¿Aparece «✅ Conectado a WhatsApp» y el recuadro del bot?** Si no, el problema es la conexión/sesión: `npm run reset-session -- --yes` y vuelve a vincular.
+2. **¿Aparece «Mensaje recibido» al escribir?** Si no, el bot no está recibiendo nada: la sesión está vinculada a otro dispositivo o se cerró desde el móvil.
+3. **¿Dice «Mensaje sin prefijo»?** Tu `PREFIX` no coincide con lo que escribes (el log muestra los prefijos activos).
+4. **¿Dice «Comando no encontrado»?** El nombre está mal escrito; prueba `.menu list`.
+5. **¿Dice «modo privado»?** Ejecuta `.public` desde el número del owner o pon `BOT_MODE=public` en `.env`.
+6. **¿Dice «Ignorado por cooldown»?** Espera unos segundos entre comandos (`ANTISPAM_SECONDS`).
+7. **¿No aparece nada de lo anterior?** Comprueba con `npm run check` que carga los 263 comandos y que el `.env` tiene `OWNER_NUMBER`.
 
 Logs: `logs/` (rotados) y `.logs` desde WhatsApp (solo owner). Nunca se registran claves, credenciales ni la sesión.
 

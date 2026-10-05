@@ -73,6 +73,28 @@ const printPairingCode = (code) => {
 `);
 };
 
+/** Antigüedad máxima (segundos) de un mensaje para seguir procesándolo. */
+export const MAX_MESSAGE_AGE_SECONDS = 300;
+
+/**
+ * Decide si un mensaje de `messages.upsert` debe procesarse.
+ * - 'notify': mensajes nuevos que recibe el bot.
+ * - 'append': mensajes que el propio usuario envía desde el teléfono vinculado.
+ *   Sin ellos el bot no responde a los comandos escritos desde tu propio número.
+ * - Se descartan los mensajes antiguos para no reejecutar comandos al reconectar.
+ * @param {string} type
+ * @param {object} message
+ * @param {number} [now] marca de tiempo en milisegundos
+ */
+export const shouldProcessUpsert = (type, message, now = Date.now()) => {
+  if (type !== 'notify' && type !== 'append') return false;
+  if (!message?.message) return false;
+  if (type === 'append' && !message.key?.fromMe) return false;
+  const timestamp = Number(message.messageTimestamp || 0);
+  if (timestamp > 0 && now / 1000 - timestamp > MAX_MESSAGE_AGE_SECONDS) return false;
+  return true;
+};
+
 /**
  * Inicia la conexión.
  * @param {{onReady?: Function}} options
@@ -182,8 +204,22 @@ export const startConnection = async (options = {}) => {
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
     for (const message of messages) {
+      if (!shouldProcessUpsert(type, message)) continue;
+
+      if (config.debugMessages) {
+        // Diagnóstico sin contenido privado: solo metadatos.
+        log.info(
+          {
+            upsert: type,
+            fromMe: Boolean(message.key?.fromMe),
+            chat: String(message.key?.remoteJid || '').endsWith('@g.us') ? 'grupo' : 'privado',
+            kind: Object.keys(message.message || {})[0] || 'sin-contenido',
+          },
+          'Mensaje recibido',
+        );
+      }
+
       handleMessage(sock, message).catch((error) => {
         log.error({ err: error.message, stack: error.stack }, 'Error no controlado en el handler');
       });

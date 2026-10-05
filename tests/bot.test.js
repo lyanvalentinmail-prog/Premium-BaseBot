@@ -477,3 +477,78 @@ test('reset-session lee SESSION_DIR aunque tenga comillas, comentarios o CRLF', 
   assert.deepEqual(fs.readdirSync(path.join(tmp, 'sesiones')), []);
   assert.ok(fs.existsSync(path.join(tmp, '.env')), 'no debe tocar el .env');
 });
+
+/* ───────────────── Recepción de mensajes ───────────────── */
+
+test('se procesan los mensajes propios (append) y se descartan los antiguos', async () => {
+  const { shouldProcessUpsert } = await import('../bot/connection.js');
+  const now = Date.now();
+  const fresh = (fromMe) => ({
+    key: { remoteJid: USER_JID, fromMe },
+    message: { conversation: '.ping' },
+    messageTimestamp: Math.floor(now / 1000),
+  });
+
+  assert.equal(shouldProcessUpsert('notify', fresh(false), now), true);
+  assert.equal(
+    shouldProcessUpsert('append', fresh(true), now),
+    true,
+    'los comandos escritos desde el teléfono vinculado deben ejecutarse',
+  );
+  assert.equal(shouldProcessUpsert('append', fresh(false), now), false);
+  assert.equal(shouldProcessUpsert('notify', { key: {} }, now), false, 'sin contenido no se procesa');
+  assert.equal(shouldProcessUpsert('prepend', fresh(false), now), false);
+
+  const old = { ...fresh(false), messageTimestamp: Math.floor(now / 1000) - 3600 };
+  assert.equal(shouldProcessUpsert('notify', old, now), false, 'no debe reejecutar mensajes antiguos');
+});
+
+test('un comando enviado por el propio bot/owner se ejecuta', async () => {
+  const reply = await send('.ping', { from: OWNER_JID, fromMe: true });
+  assert.match(reply, /PONG|Midiendo/);
+});
+
+test('el remitente se resuelve aunque WhatsApp use un LID', async () => {
+  const { serialize } = await import('../bot/lib/serialize.js');
+
+  const privado = serialize(
+    {
+      key: { remoteJid: '123456789@lid', fromMe: false, senderPn: OWNER_JID, senderLid: '123456789@lid', id: 'A' },
+      message: { conversation: '.ping' },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+    },
+    sock,
+  );
+  assert.equal(privado.sender, OWNER_JID, 'debe usar el número real (senderPn)');
+  assert.equal(privado.senderAlt, '123456789@lid');
+
+  const grupo = serialize(
+    {
+      key: {
+        remoteJid: GROUP_JID,
+        fromMe: false,
+        participant: '987654321@lid',
+        participantPn: USER_JID,
+        participantLid: '987654321@lid',
+        id: 'B',
+      },
+      message: { conversation: '.ping' },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+    },
+    sock,
+  );
+  assert.equal(grupo.sender, USER_JID);
+  assert.equal(grupo.senderAlt, '987654321@lid');
+});
+
+test('el owner es reconocido aunque el mensaje llegue con LID', async () => {
+  sock.reset();
+  for (const command of commands.values()) clearCooldown(`${OWNER_JID}:${command.name}`);
+  await handleMessage(sock, {
+    key: { remoteJid: '555000111@lid', fromMe: false, senderPn: OWNER_JID, senderLid: '555000111@lid', id: 'C' },
+    pushName: 'Owner',
+    message: { conversation: '.blockedcmds' },
+    messageTimestamp: Math.floor(Date.now() / 1000),
+  });
+  assert.match(sock.lastText(), /desactivados/, 'el owner debe poder usar sus comandos con LID');
+});

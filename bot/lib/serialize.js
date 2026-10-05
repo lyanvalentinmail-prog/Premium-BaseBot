@@ -68,11 +68,22 @@ export const serialize = (raw, sock) => {
   const chat = key.remoteJid;
   const isGroup = String(chat || '').endsWith('@g.us');
   const botJid = jidNormalizedUser(sock?.user?.id || '');
-  const sender = isGroup
-    ? jidNormalizedUser(key.participant || raw.participant || '')
+
+  // WhatsApp puede identificar al remitente con un LID (@lid) en lugar de su
+  // número. Baileys adjunta el JID real en senderPn/participantPn: se prefiere
+  // ese valor para que los permisos (owner, admin, baneos) sigan funcionando.
+  const normalize = (jid) => (jid ? jidNormalizedUser(jid) : '');
+  const senderPrimary = isGroup
+    ? normalize(key.participantPn || key.participant || raw.participant || '')
     : key.fromMe
       ? botJid
-      : jidNormalizedUser(chat || '');
+      : normalize(key.senderPn || chat || '');
+  const senderAlt = isGroup
+    ? normalize(key.participantLid || (key.participantPn ? key.participant : '') || '')
+    : key.fromMe
+      ? normalize(sock?.user?.lid || '')
+      : normalize(key.senderLid || (key.senderPn ? chat : '') || '');
+  const sender = senderPrimary || senderAlt;
 
   const type = getContentType(content);
   const node = content[type] || {};
@@ -114,6 +125,8 @@ export const serialize = (raw, sock) => {
     isGroup,
     fromMe: Boolean(key.fromMe),
     sender,
+    // Identidad alternativa (LID o número) del mismo remitente, si WhatsApp la envía.
+    senderAlt: senderAlt && senderAlt !== sender ? senderAlt : null,
     pushName: raw.pushName || '',
     timestamp: Number(raw.messageTimestamp) || Math.floor(Date.now() / 1000),
     type,

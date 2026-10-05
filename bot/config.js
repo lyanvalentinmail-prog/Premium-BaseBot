@@ -105,6 +105,9 @@ export const config = {
     maxReconnectAttempts: int(process.env.MAX_RECONNECT_ATTEMPTS, 10),
     browser: process.env.BROWSER_NAME || 'Chrome',
   },
+  // DEBUG_MESSAGES=true registra metadatos (nunca contenido) de cada mensaje
+  // recibido y del comando detectado: sirve para diagnosticar "no responde".
+  debugMessages: bool(process.env.DEBUG_MESSAGES, false),
   logLevel: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   nodeEnv: process.env.NODE_ENV || 'development',
   support: process.env.SUPPORT_LINK || '',
