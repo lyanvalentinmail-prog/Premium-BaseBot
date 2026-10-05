@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+package-lock.json.bak
+
+# Configuración y secretos
+.env
+.env.*
+!.env.example
+
+# Sesión de WhatsApp (NUNCA subir)
+sessions/
+*.session
+creds.json
+
+# Base de datos
+data/
+data/*.db
+data/*.db-journal
+!data/.gitkeep
+
+# Temporales y logs
+assets/temp/*
+!assets/temp/.gitkeep
+logs/
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
