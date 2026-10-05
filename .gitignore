@@ -12,11 +12,11 @@ sessions/
 *.session
 creds.json
 
-# Base de datos
-data/
-data/*.db
-data/*.db-journal
-!data/.gitkeep
+# Base de datos (solo la carpeta raíz, no bot/lib/data)
+/data/
+/data/*.db
+/data/*.db-journal
+!/data/.gitkeep
 
 # Temporales y logs
 assets/temp/*

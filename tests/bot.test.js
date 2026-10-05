@@ -370,3 +370,38 @@ test('un error en un comando no tumba el proceso', async () => {
   assert.ok(!reply.includes('fallo interno simulado'), 'no debe filtrar el error interno');
   commands.delete('comandoroto');
 });
+
+/* ───────────────── Integridad del repositorio ───────────────── */
+
+test('todos los imports relativos existen y están versionados', async () => {
+  const { execSync } = await import('node:child_process');
+  const walk = (dir, out = []) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (['node_modules', '.git', 'data', 'logs', 'sessions'].includes(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full, out);
+      else if (entry.name.endsWith('.js')) out.push(full);
+    }
+    return out;
+  };
+
+  const files = walk(ROOT);
+  const missing = [];
+  const ignored = [];
+  for (const file of files) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const match of source.matchAll(/from\s+'(\.[^']+)'|import\('(\.[^']+)'\)/g)) {
+      const target = path.resolve(path.dirname(file), match[1] || match[2]);
+      if (!fs.existsSync(target)) {
+        missing.push(`${path.relative(ROOT, file)} → ${match[1] || match[2]}`);
+        continue;
+      }
+      // Un fichero importado nunca debe estar excluido por .gitignore.
+      const rel = path.relative(ROOT, target);
+      const result = execSync(`git check-ignore ${JSON.stringify(rel)} || true`, { cwd: ROOT }).toString().trim();
+      if (result) ignored.push(rel);
+    }
+  }
+  assert.deepEqual(missing, [], `imports rotos: ${missing.join(', ')}`);
+  assert.deepEqual([...new Set(ignored)], [], `ficheros importados pero ignorados por git: ${ignored.join(', ')}`);
+});
