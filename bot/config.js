@@ -94,6 +94,10 @@ export const config = {
     selfReply: bool(process.env.SELF_REPLY, true), // responder a comandos enviados por el propio bot/owner
     antiSpamSeconds: Number(process.env.ANTISPAM_SECONDS ?? 2),
     reactOnCommand: bool(process.env.REACT_ON_COMMAND, true),
+    // Menú con botón/lista nativa. Está desactivado por defecto porque muchas
+    // versiones de WhatsApp descartan el mensaje interactivo sin devolver error
+    // (el bot "no responde"). El menú normal con imagen + texto siempre funciona.
+    interactiveMenu: bool(process.env.INTERACTIVE_MENU, false),
   },
   connection: {
     pairingNumber: String(process.env.PAIRING_NUMBER || '').replace(/\D/g, ''),

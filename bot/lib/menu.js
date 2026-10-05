@@ -81,13 +81,15 @@ export const renderCategoryIndex = (prefix) => {
 };
 
 /** Caption del menú principal. */
-export const mainMenuCaption = ({ pushName = 'usuario', status = 'Online' } = {}) => {
+export const mainMenuCaption = ({ pushName = 'usuario', status = 'Online', interactive = false } = {}) => {
   const prefix = config.prefix;
   const mode = getMode() === 'public' ? 'PÚBLICO' : 'PRIVADO';
   return [
     `¡Hola, *${pushName}* 🎌`,
     `*${config.name}* está listo para acompañarte durante el día 🎐`,
-    '¡Toca el botón de abajo y elige una opción del menú!',
+    interactive
+      ? '¡Toca el botón de abajo y elige una opción del menú!'
+      : `¡Escribe *${prefix}menu list* o elige una categoría del listado de abajo!`,
     '',
     `╭──( *${config.name}*)`,
     `║🎌 Nombre del bot ☇ *${config.name}*`,
@@ -127,9 +129,48 @@ const buildSections = (prefix) => {
  * Si el formato interactivo no está soportado, cae a imagen + texto.
  */
 export const sendMainMenu = async (sock, jid, { pushName, quoted } = {}) => {
-  const caption = mainMenuCaption({ pushName });
+  const caption = mainMenuCaption({ pushName, interactive: config.behaviour.interactiveMenu });
   const footer = `${config.name} · ${config.version}`;
-  const banner = fs.existsSync(paths.banner) ? fs.readFileSync(paths.banner) : null;
+
+  let banner = null;
+  try {
+    if (fs.existsSync(paths.banner)) {
+      const file = fs.readFileSync(paths.banner);
+      if (file.length > 0) banner = file;
+      else log.warn({ path: paths.banner }, 'El banner está vacío, se envía el menú sin imagen');
+    } else {
+      log.warn({ path: paths.banner }, 'Banner no encontrado, se envía el menú sin imagen');
+    }
+  } catch (error) {
+    log.warn({ err: error.message }, 'No se pudo leer el banner');
+  }
+
+  const navigation = [
+    '',
+    '📚 *VER LISTA DE COMANDOS*',
+    `› ${config.prefix}menu list ‣ todos los comandos`,
+    `› ${config.prefix}categories ‣ índice de categorías`,
+    `› ${config.prefix}menu <categoria> ‣ ej. ${config.prefix}menu tools`,
+  ].join('\n');
+  const fallbackCaption = `${caption}\n${navigation}`;
+
+  /** Envío siempre compatible: imagen con caption y, si falla, texto plano. */
+  const sendPlain = async () => {
+    if (banner) {
+      try {
+        await sock.sendMessage(jid, { image: banner, caption: fallbackCaption }, { quoted });
+        return { interactive: false, withImage: true };
+      } catch (error) {
+        log.warn({ err: error.message }, 'No se pudo enviar el banner, se envía solo texto');
+      }
+    }
+    await sock.sendMessage(jid, { text: fallbackCaption }, { quoted });
+    return { interactive: false, withImage: false };
+  };
+
+  // Por defecto se usa el menú clásico (imagen + texto): es el único formato que
+  // renderizan todas las versiones de WhatsApp. El interactivo es opcional.
+  if (!config.behaviour.interactiveMenu) return sendPlain();
 
   try {
     const media = banner
@@ -174,16 +215,10 @@ export const sendMainMenu = async (sock, jid, { pushName, quoted } = {}) => {
     await sock.relayMessage(jid, message.message, { messageId: message.key.id });
     return { interactive: true };
   } catch (error) {
-    log.warn({ err: error.message }, 'Menú interactivo no soportado, usando texto plano');
+    log.warn({ err: error.message }, 'Menú interactivo no soportado, usando el menú clásico');
   }
 
-  const fallbackCaption = `${caption}\n\n📚 *VER LISTA DE COMANDOS*\n› ${config.prefix}menu list\n› ${config.prefix}categories\n› ${config.prefix}menu <categoría>`;
-  if (banner) {
-    await sock.sendMessage(jid, { image: banner, caption: fallbackCaption }, { quoted });
-  } else {
-    await sock.sendMessage(jid, { text: fallbackCaption }, { quoted });
-  }
-  return { interactive: false };
+  return sendPlain();
 };
 
 export { findCategory };

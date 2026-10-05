@@ -16,7 +16,7 @@ const menu = {
   category: 'main',
   args: '[categoria]',
   description: 'Muestra el menú principal o una categoría concreta',
-  cooldown: 5,
+  cooldown: 3,
   async execute(ctx) {
     const option = (ctx.args[0] || '').toLowerCase();
 

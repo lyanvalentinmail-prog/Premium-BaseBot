@@ -132,6 +132,7 @@ Lo mínimo imprescindible es `OWNER_NUMBER`.
 | `SESSION_DIR` | `sessions` | Carpeta de credenciales |
 | `BANNER_PATH` | `assets/banner.jpg` | Imagen del menú |
 | `ANTISPAM_SECONDS` | `3` | Cooldown global por usuario y comando |
+| `INTERACTIVE_MENU` | `false` | `true` intenta el menú con botón/lista nativa; muchas versiones de WhatsApp lo descartan sin avisar, por eso por defecto se envía el menú clásico (imagen + texto) |
 | `LOG_LEVEL` | `info` | `trace`…`silent` |
 | `NODE_ENV` | `production` | Entorno |
 
@@ -292,6 +293,7 @@ Se generan automáticamente desde la metadata de cada comando; `.menu` y `.menu 
 - **Modo público/privado** — persistente en base de datos (`.public` / `.private`).
 - **Errores** — jerarquía `UserError` / `ProviderError` / `NotConfiguredError`; los stack traces **solo van al log**, nunca a WhatsApp, y un comando que falla no tumba el bot.
 - **HTTP centralizado** (`bot/lib/apiClient.js`) — timeout, tamaño máximo de respuesta, validación de URL y **protección anti-SSRF** (bloquea `localhost`, `127.0.0.0/8`, `::1`, rangos privados, link-local y metadatos de nube `169.254.169.254`).
+- **Menú** — por defecto se envía como **imagen + caption + navegación textual** (`.menu list`, `.categories`, `.menu <categoría>`), que es el formato que renderizan todas las versiones de WhatsApp. Con `INTERACTIVE_MENU=true` se intenta primero el botón/lista nativa y, si falla, cae automáticamente al menú clásico.
 - **Temporales** — todo archivo multimedia temporal se elimina **también en caso de error**; `.cleantemp` fuerza la limpieza.
 
 ---
@@ -421,6 +423,8 @@ MAIN, INFO, FUN, PANEL, OWNER, GROUP, GAME, RPG, XP, STORE, QUOTES, RANDOM (incl
 | Descargas fallan | Instala/actualiza `yt-dlp` (`pip install -U yt-dlp`) |
 | `⚠️ Este servicio no está configurado.` | Falta la clave de API correspondiente (ver la tabla anterior) |
 | La base de datos no guarda | Comprueba permisos de escritura en `data/`; `npm run check` lo verifica |
+| `.menu` no responde (el resto de comandos sí) | Estás usando el menú interactivo: pon `INTERACTIVE_MENU=false` en `.env` (valor por defecto desde la v1.0.1). WhatsApp descarta en silencio los mensajes de botón/lista en muchas versiones |
+| `.menu` llega sin imagen | Falta o está vacío `assets/banner.jpg` (o `BANNER_PATH` apunta mal): el bot envía el menú en texto y lo avisa en el log |
 | El bot no responde en un grupo | Modo privado activo (`.public`), comando bloqueado (`.blockedcmds`) o usuario baneado (`.banlist`) |
 | Termux mata el proceso | `termux-wake-lock` y desactiva la optimización de batería; para 24/7 real usa un VPS |
 | Errores TLS al instalar | Problema de red/proxy local, no del proyecto; prueba otra red o `npm config set registry https://registry.npmjs.org/` |

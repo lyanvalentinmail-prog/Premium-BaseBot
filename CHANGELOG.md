@@ -3,6 +3,19 @@
 Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [SemVer](https://semver.org/lang/es/).
 
+## [1.0.1] - 2026-10-05
+
+### Corregido
+
+- `bot/lib/data/` (words, items, quotes) no llegaba al repositorio: la regla `data/` del `.gitignore` (sin ancla) también excluía esa carpeta, provocando `ERR_MODULE_NOT_FOUND` al clonar. Ahora la regla es `/data/`.
+- `.menu` podía no mostrar nada: el mensaje interactivo (botón/lista nativa) es descartado sin error por muchas versiones de WhatsApp. Ahora el menú se envía por defecto como **imagen + caption + navegación textual** y el formato interactivo es opcional con `INTERACTIVE_MENU=true`, con degradación automática si falla.
+- El menú ya no se rompe si el banner falta o está vacío: avisa en el log y envía el menú en texto.
+
+### Añadido
+
+- Variable `INTERACTIVE_MENU` en `.env.example`.
+- Pruebas: integridad de imports (ningún módulo importado puede estar ignorado por git), envío real de `.menu` con banner y comportamiento sin banner. Total: **40 pruebas**.
+
 ## [1.0.0] - 2026-10-05
 
 ### Añadido

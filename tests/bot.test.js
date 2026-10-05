@@ -305,6 +305,35 @@ test('.menu list y .categories responden', async () => {
   assert.match(await send('.menu categoriainexistente'), /no existe/);
 });
 
+test('.menu envía el banner con el caption y la navegación', async () => {
+  sock.reset();
+  for (const command of commands.values()) clearCooldown(`${USER_JID}:${command.name}`);
+  await handleMessage(sock, makeMessage('.menu'));
+  const image = sock.sent.find((entry) => entry.content?.image);
+  assert.ok(image, '.menu debe enviar la imagen del banner');
+  assert.ok(Buffer.isBuffer(image.content.image) && image.content.image.length > 0, 'el banner no puede estar vacío');
+  const caption = image.content.caption;
+  assert.match(caption, /TestBot/);
+  assert.match(caption, /Total de comandos/);
+  assert.match(caption, /VER LISTA DE COMANDOS/);
+  assert.match(caption, /\.menu list/);
+  assert.match(caption, /\.categories/);
+});
+
+test('.menu funciona aunque falte el banner', async () => {
+  const original = fs.readFileSync(path.join(ROOT, 'assets/banner.jpg'));
+  const temp = path.join(ROOT, 'assets/banner.jpg');
+  fs.rmSync(temp);
+  try {
+    sock.reset();
+    for (const command of commands.values()) clearCooldown(`${USER_JID}:${command.name}`);
+    await handleMessage(sock, makeMessage('.menu'));
+    assert.match(sock.lastText(), /VER LISTA DE COMANDOS/, 'debe caer a texto plano sin romperse');
+  } finally {
+    fs.writeFileSync(temp, original);
+  }
+});
+
 test('.help describe un comando', async () => {
   const reply = await send('.help weather');
   assert.match(reply, /weather <ciudad>/);
