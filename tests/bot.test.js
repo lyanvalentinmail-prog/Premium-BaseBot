@@ -552,3 +552,24 @@ test('el owner es reconocido aunque el mensaje llegue con LID', async () => {
   });
   assert.match(sock.lastText(), /desactivados/, 'el owner debe poder usar sus comandos con LID');
 });
+
+test('comando escrito en el chat "contigo mismo" del número del bot', async () => {
+  const { shouldProcessUpsert } = await import('../bot/connection.js');
+  const { BOT_JID } = await import('./helpers/mockSock.js');
+
+  // Mensaje tal y como lo entrega WhatsApp al dispositivo vinculado.
+  const raw = {
+    key: { remoteJid: BOT_JID, fromMe: true, id: 'SELF1' },
+    pushName: 'Yo',
+    message: { conversation: '.ping' },
+    messageTimestamp: Math.floor(Date.now() / 1000),
+  };
+
+  assert.equal(shouldProcessUpsert('append', raw, Date.now()), true);
+
+  sock.reset();
+  for (const command of commands.values()) clearCooldown(`${BOT_JID}:${command.name}`);
+  await handleMessage(sock, raw);
+  assert.match(sock.lastText(), /PONG|Midiendo/);
+  assert.equal(sock.sent.at(-1).jid, BOT_JID, 'debe responder en el mismo chat');
+});
