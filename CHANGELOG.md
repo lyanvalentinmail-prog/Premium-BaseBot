@@ -1,0 +1,83 @@
+# Changelog
+
+Todas las novedades relevantes de este proyecto se documentan aquí.
+El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [SemVer](https://semver.org/lang/es/).
+
+## [1.0.4] - 2026-10-05
+
+### Añadido
+
+- `npm run doctor`: diagnóstico en vivo que traza cada mensaje recibido (tipo de evento, remitente, prefijo con códigos de carácter, comando resuelto, permisos y modo) sin ejecutar los comandos.
+- Aviso «¿No responde? ☇ npm run doctor» en el banner de conexión.
+
+### Cambiado
+
+- `messages.upsert` acepta ahora **cualquier** tipo de evento cuando el mensaje es propio y reciente (no solo `append`), para cubrir las variaciones entre versiones de WhatsApp. El historial antiguo se sigue descartando.
+
+## [1.0.3] - 2026-10-05
+
+### Corregido
+
+- **Los comandos escritos desde el propio número del bot no se ejecutaban**: WhatsApp entrega esos mensajes en `messages.upsert` con `type: 'append'` y el bot solo procesaba `'notify'`. Es el caso más habitual al probar el bot recién vinculado, y hacía que *ningún* comando respondiera.
+- **Identidades LID (`@lid`)**: WhatsApp puede identificar al remitente con un LID en lugar de su número. Ahora se resuelve el JID real desde `senderPn`/`participantPn`, de modo que owner, administradores, baneos y modo privado vuelven a funcionar. Se guarda la identidad alternativa en `m.senderAlt` y se comprueban ambas.
+- El bot ya no reejecuta comandos antiguos reenviados por WhatsApp al reconectar (límite de 5 minutos de antigüedad).
+
+### Añadido
+
+- `DEBUG_MESSAGES=true`: registra metadatos (nunca el contenido) de cada mensaje recibido, el comando detectado y el motivo por el que se ignora (sin prefijo, no encontrado, modo privado, cooldown).
+- Sección «El bot no responde a nada» en el README con un diagnóstico paso a paso.
+- Pruebas del filtro de `messages.upsert`, de los comandos propios (`fromMe`) y de la resolución de LID (45 en total).
+
+## [1.0.2] - 2026-10-05
+
+### Corregido
+
+- `npm run reset-session` no encontraba la sesión cuando el `.env` tenía finales de línea de Windows (CRLF), comillas o un comentario en la misma línea de `SESSION_DIR`: decía «No hay ninguna sesión guardada» y no borraba nada.
+- Sin terminal interactiva el script ya no se queda bloqueado ni borra sin confirmar: explica que debe usarse `npm run reset-session -- --yes`.
+
+### Añadido
+
+- Detección automática de carpetas de sesión alternativas (`sessions/`, `session/`, `auth_info_baileys/`, `auth_info/`) y aviso con la ruta encontrada.
+- Prioridad de la variable de entorno: `SESSION_DIR=... npm run reset-session`.
+- Flags `--yes`, `-y`, `--force`, `-f`; recuento de elementos borrados y aviso de detener el bot antes.
+- Errores de borrado (permisos, ficheros bloqueados) se informan con la ruta concreta.
+- Pruebas del resolutor de `SESSION_DIR` y del borrado (41 en total).
+
+## [1.0.1] - 2026-10-05
+
+### Corregido
+
+- `bot/lib/data/` (words, items, quotes) no llegaba al repositorio: la regla `data/` del `.gitignore` (sin ancla) también excluía esa carpeta, provocando `ERR_MODULE_NOT_FOUND` al clonar. Ahora la regla es `/data/`.
+- `.menu` podía no mostrar nada: el mensaje interactivo (botón/lista nativa) es descartado sin error por muchas versiones de WhatsApp. Ahora el menú se envía por defecto como **imagen + caption + navegación textual** y el formato interactivo es opcional con `INTERACTIVE_MENU=true`, con degradación automática si falla.
+- El menú ya no se rompe si el banner falta o está vacío: avisa en el log y envía el menú en texto.
+
+### Añadido
+
+- Variable `INTERACTIVE_MENU` en `.env.example`.
+- Pruebas: integridad de imports (ningún módulo importado puede estar ignorado por git), envío real de `.menu` con banner y comportamiento sin banner. Total: **40 pruebas**.
+
+## [1.0.0] - 2026-10-05
+
+### Añadido
+
+- **Conexión Baileys multi-device** con Pairing Code (número normalizado) y QR alternativo, sesión persistente en `sessions/` y reconexión con límite de intentos (sin bucles infinitos).
+- **Carga automática de comandos** desde `bot/commands/` con metadata uniforme y validación; sin registro manual en el handler. **263 comandos en 26 categorías**.
+- **Contexto reutilizable** (`ctx`) con helpers `reply`, `react`, `send`, `targetJid`, `mediaMessage`, `downloadMedia`.
+- **Prefijo configurable** (`PREFIX` / `PREFIXES`), nunca hardcodeado.
+- **Menú** con banner, caption dinámico (nombre, owner, versión, modo, estado, uptime, prefijo, total de comandos), lista interactiva y fallback textual (`.menu list`, `.commands`, `.menu <categoría>`).
+- **Símbolos de permiso** Ⓟ Ⓛ Ⓞ Ⓐ generados automáticamente desde la metadata, con leyenda y totales por categoría.
+- **Validación real de argumentos** con validadores de URL, número, mención, media y enumerados; mensaje `❌ Falta un argumento obligatorio.` + uso.
+- **Sistemas**: límites diarios con reset y reembolso, premium con expiración, economía atómica, XP con anti-farm y prestigio, RPG persistente con cooldowns, minijuegos por chat, gestión de grupos (welcome/goodbye/antilink/kick/promote/demote), panel y herramientas de owner, modo público/privado persistente.
+- **Base de datos SQLite vía `sql.js`** (sin compilación nativa, apta para Termux) con migraciones seguras y guardado atómico.
+- **Cliente HTTP centralizado** con timeout, tamaño máximo, validación de URL y protección anti-SSRF (localhost, 127/8, ::1, rangos privados, link-local y metadatos de nube).
+- **Logging estructurado** (pino) con redacción de secretos y rotación simple; `.logs` para el owner.
+- **Manejo global de errores**: `UserError` / `ProviderError` / `NotConfiguredError`; nunca se envían stack traces a WhatsApp.
+- **Scripts**: `start`, `dev`, `setup`, `reset-session`, `check`, `test`.
+- **Suite de pruebas** (37 tests) sobre el handler real con socket de WhatsApp simulado.
+- **Documentación**: README completo (Termux, VPS, pairing code, personalización, APIs, 24/7, troubleshooting, seguridad) y clasificación ✅ / ⚙️ / 🚧.
+
+### Notas
+
+- `assets/sounds/` se distribuye vacío para no incluir audio con derechos.
+- Renombrados por colisión: alias `invertir` → `alreves` (`reverse`), alias `speed` → `latencia` (`ping`), comando `pinterest` de SEARCH → `pinterestsearch`.
+- `.spotify` devuelve únicamente metadatos: no se implementa ningún bypass de DRM.
