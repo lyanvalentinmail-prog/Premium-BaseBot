@@ -184,7 +184,7 @@ La sesión queda en `sessions/` y se reutiliza en los siguientes arranques. Si l
 | `npm start` | Arranca el bot |
 | `npm run dev` | Arranca con recarga automática (`node --watch`) |
 | `npm run setup` | Comprueba Node, crea `.env`, carpetas y base de datos, detecta FFmpeg/yt-dlp y resume la configuración |
-| `npm run reset-session` | Borra **solo** la carpeta de sesión (pide confirmación; `-- --yes` la omite) |
+| `npm run reset-session` | Borra **solo** la carpeta de sesión. Pide confirmación; para saltarla usa `npm run reset-session -- --yes` (los dos guiones son obligatorios: npm se queda con los flags que van antes) |
 | `npm run check` | Diagnóstico offline: config, owner, DB, comandos, binarios, proveedores y banner |
 | `npm test` | Suite de pruebas automáticas (37 tests, sin conexión a WhatsApp) |
 
@@ -423,6 +423,8 @@ MAIN, INFO, FUN, PANEL, OWNER, GROUP, GAME, RPG, XP, STORE, QUOTES, RANDOM (incl
 | Descargas fallan | Instala/actualiza `yt-dlp` (`pip install -U yt-dlp`) |
 | `⚠️ Este servicio no está configurado.` | Falta la clave de API correspondiente (ver la tabla anterior) |
 | La base de datos no guarda | Comprueba permisos de escritura en `data/`; `npm run check` lo verifica |
+| `npm run reset-session` dice «No hay ninguna sesión guardada» | Desde la v1.0.2 detecta la carpeta aunque el `.env` esté en formato Windows (CRLF), con comillas o con comentarios, y busca también `session/`, `auth_info_baileys/` y `auth_info/`. Si usas otra ruta: `SESSION_DIR=mi_carpeta npm run reset-session -- --yes` |
+| `npm run reset-session` no borra nada o se queda esperando | Sin terminal interactiva no puede preguntar: usa `npm run reset-session -- --yes`. Detén el bot antes, o volverá a escribir la sesión al instante |
 | `.menu` no responde (el resto de comandos sí) | Estás usando el menú interactivo: pon `INTERACTIVE_MENU=false` en `.env` (valor por defecto desde la v1.0.1). WhatsApp descarta en silencio los mensajes de botón/lista en muchas versiones |
 | `.menu` llega sin imagen | Falta o está vacío `assets/banner.jpg` (o `BANNER_PATH` apunta mal): el bot envía el menú en texto y lo avisa en el log |
 | El bot no responde en un grupo | Modo privado activo (`.public`), comando bloqueado (`.blockedcmds`) o usuario baneado (`.banlist`) |

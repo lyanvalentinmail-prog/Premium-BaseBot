@@ -434,3 +434,46 @@ test('todos los imports relativos existen y están versionados', async () => {
   assert.deepEqual(missing, [], `imports rotos: ${missing.join(', ')}`);
   assert.deepEqual([...new Set(ignored)], [], `ficheros importados pero ignorados por git: ${ignored.join(', ')}`);
 });
+
+/* ───────────────── Script reset-session ───────────────── */
+
+test('reset-session lee SESSION_DIR aunque tenga comillas, comentarios o CRLF', async () => {
+  const { parseSessionDir, resolveSessionDir, wipeSessionDir } = await import('../scripts/reset-session.js');
+
+  assert.equal(parseSessionDir('SESSION_DIR=sessions'), 'sessions');
+  assert.equal(parseSessionDir('SESSION_DIR=sessions\r\nPREFIX=.'), 'sessions', 'debe tolerar CRLF');
+  assert.equal(parseSessionDir('SESSION_DIR="mi sesion"'), 'mi sesion');
+  assert.equal(parseSessionDir("SESSION_DIR='sessions'"), 'sessions');
+  assert.equal(parseSessionDir('SESSION_DIR=sessions # carpeta'), 'sessions');
+  assert.equal(parseSessionDir('  SESSION_DIR = sessions  '), 'sessions');
+  assert.equal(parseSessionDir('export SESSION_DIR=sessions'), 'sessions');
+  assert.equal(parseSessionDir('PREFIX=.'), null);
+  assert.equal(parseSessionDir('SESSION_DIR='), null);
+
+  // Carpeta temporal que simula un proyecto con sesión guardada
+  const tmp = fs.mkdtempSync(path.join(ROOT, 'data/test/reset-'));
+  fs.writeFileSync(path.join(tmp, '.env'), 'PREFIX=.\r\nSESSION_DIR=sesiones\r\n');
+  fs.mkdirSync(path.join(tmp, 'sesiones'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, 'sesiones/creds.json'), '{}');
+  fs.mkdirSync(path.join(tmp, 'sesiones/sub'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, 'sesiones/sub/key.json'), '{}');
+
+  assert.equal(resolveSessionDir(tmp, {}), path.join(tmp, 'sesiones'));
+  assert.equal(
+    resolveSessionDir(tmp, { SESSION_DIR: 'otra' }),
+    path.join(tmp, 'otra'),
+    'la variable de entorno tiene prioridad',
+  );
+
+  // Sin .env, detecta una carpeta conocida con credenciales
+  const tmp2 = fs.mkdtempSync(path.join(ROOT, 'data/test/reset2-'));
+  fs.mkdirSync(path.join(tmp2, 'auth_info_baileys'), { recursive: true });
+  fs.writeFileSync(path.join(tmp2, 'auth_info_baileys/creds.json'), '{}');
+  assert.equal(resolveSessionDir(tmp2, {}), path.join(tmp2, 'auth_info_baileys'));
+
+  // El borrado elimina todo el contenido y conserva la carpeta
+  const removed = wipeSessionDir(path.join(tmp, 'sesiones'));
+  assert.equal(removed, 2);
+  assert.deepEqual(fs.readdirSync(path.join(tmp, 'sesiones')), []);
+  assert.ok(fs.existsSync(path.join(tmp, '.env')), 'no debe tocar el .env');
+});

@@ -3,6 +3,21 @@
 Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [SemVer](https://semver.org/lang/es/).
 
+## [1.0.2] - 2026-10-05
+
+### Corregido
+
+- `npm run reset-session` no encontraba la sesión cuando el `.env` tenía finales de línea de Windows (CRLF), comillas o un comentario en la misma línea de `SESSION_DIR`: decía «No hay ninguna sesión guardada» y no borraba nada.
+- Sin terminal interactiva el script ya no se queda bloqueado ni borra sin confirmar: explica que debe usarse `npm run reset-session -- --yes`.
+
+### Añadido
+
+- Detección automática de carpetas de sesión alternativas (`sessions/`, `session/`, `auth_info_baileys/`, `auth_info/`) y aviso con la ruta encontrada.
+- Prioridad de la variable de entorno: `SESSION_DIR=... npm run reset-session`.
+- Flags `--yes`, `-y`, `--force`, `-f`; recuento de elementos borrados y aviso de detener el bot antes.
+- Errores de borrado (permisos, ficheros bloqueados) se informan con la ruta concreta.
+- Pruebas del resolutor de `SESSION_DIR` y del borrado (41 en total).
+
 ## [1.0.1] - 2026-10-05
 
 ### Corregido
